@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    
+  <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no">
+  <title>Basic Service Area</title>
+  
+  <link rel="stylesheet" href="https://js.arcgis.com/3.35/dijit/themes/claro/claro.css">
+  <link rel="stylesheet" href="https://js.arcgis.com/3.35/esri/css/esri.css">
+  <style> 
+    body, html, #main { 
+      margin: 0; 
+      padding: 0; 
+      height: 100%; 
+      width: 100%;
+    }
+  </style> 
+  
+  <script src="https://js.arcgis.com/3.35/"></script>
+  <script>
+    var map, serviceAreaTask, params, clickpoint;
+
+    require([
+      "esri/map", 
+      "esri/config",
+      "esri/tasks/query",
+      "esri/layers/FeatureLayer",
+      "esri/layers/ArcGISDynamicMapServiceLayer", 
+      "esri/tasks/ServiceAreaTask", 
+      "esri/tasks/ServiceAreaParameters", 
+      "esri/tasks/FeatureSet",
+      "esri/symbols/SimpleMarkerSymbol", 
+      "esri/symbols/SimpleLineSymbol", 
+      "esri/symbols/SimpleFillSymbol",
+      "esri/geometry/Point", 
+      "esri/graphic",
+      "dojo/parser", 
+      "dojo/dom", 
+      "dijit/registry", 
+      "esri/Color",
+      "esri/geometry/Extent",
+      "dojo/_base/array",
+      "dijit/layout/BorderContainer", 
+      "dijit/layout/ContentPane", 
+      "dijit/form/HorizontalRule", 
+      "dijit/form/HorizontalRuleLabels", 
+      "dijit/form/HorizontalSlider",
+      "dojo/domReady!"], 
+    
+    function(
+      Map, 
+      esriConfig,
+      Query,
+      FeatureLayer,
+      ArcGISDynamicMapServiceLayer, 
+      ServiceAreaTask, 
+      ServiceAreaParameters, 
+      FeatureSet, 
+      SimpleMarkerSymbol, 
+      SimpleLineSymbol, 
+      SimpleFillSymbol,
+      Point, 
+      Graphic,
+      parser, 
+      dom, 
+      registry,
+      Color,
+      Extent,
+      arrayUtils
+    ) {
+      parser.parse();
+
+
+
+
+      map = new Map("map", { 
+        basemap: "topo",
+        center: [-3.7025600,40.4165000],
+        zoom: 10,
+      });
+
+
+
+    var capacentrosalud = new FeatureLayer("https://services3.arcgis.com/V5ofcVEuSTHCjG3L/ArcGIS/rest/services/CENTROS_SALUD/FeatureServer/0");
+    map.addLayer (capacentrosalud);
+
+      map.on("click", mapClickHandler);
+
+      params = new ServiceAreaParameters();
+      params.defaultBreaks= [1];
+      params.outSpatialReference = map.spatialReference;
+      params.returnFacilities = false;
+      param.facilities = 
+      
+      serviceAreaTask = new ServiceAreaTask("https://formacion.esri.es/server/rest/services/RedMadrid/NAServer/Service%20Area");
+      
+      
+     
+      
+      function mapClickHandler(evt) {
+        clickpoint = evt;
+        map.graphics.clear(); 
+        
+        var pointSymbol = new SimpleMarkerSymbol(
+          "diamond",
+          20,
+          new SimpleLineSymbol(
+            "solid",
+            new Color([88,116,152]), 2
+          ),
+          new Color([88,116,152,0.45])
+        );
+
+        var inPoint = new Point(evt.mapPoint.x, evt.mapPoint.y, map.spatialReference);
+        var location = new Graphic(inPoint, pointSymbol);
+
+        map.graphics.add(location);
+        var features = [];
+        features.push(location);
+        var facilities = new FeatureSet();
+        facilities.features = features;
+        params.facilities = facilities;
+
+       
+        //resolver
+        serviceAreaTask.solve(params,function(solveResult){
+          var polygonSymbol = new SimpleFillSymbol(
+            "solid",  
+            new SimpleLineSymbol("solid", new Color([232,104,80]), 2),
+            new Color([232,104,80,0.25])
+          );
+          arrayUtils.forEach(solveResult.serviceAreaPolygons, function(serviceArea){
+            serviceArea.setSymbol(polygonSymbol);
+            map.graphics.add(serviceArea);
+          });
+          
+        }, function(err){
+          console.log(err.message);
+        });
+      }
+    });
+  </script>
+</head>
+
+<body class="claro"> 
+  <div data-dojo-type="dijit/layout/BorderContainer" data-dojo-props="design:'headline', gutters:false" style="width:100%;height:100%;margin:0px;">
+    <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'top'"></div> 
+
+    <div id="map" dojotype="dijit/layout/ContentPane" data-dojo-props="region:'center'"></div>    
+  </div>
+</body>
+</html>
